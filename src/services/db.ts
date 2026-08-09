@@ -31,41 +31,69 @@ let dbPromise: Promise<IDBPDatabase<OpenScriptureDB>> | null = null;
 
 export function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<OpenScriptureDB>('open-scripture-db', 1, {
-      upgrade(db) {
-        // Verses Store
-        const verseStore = db.createObjectStore('verses', { keyPath: 'id' });
-        verseStore.createIndex('by-book-chapter', ['bookId', 'chapter']);
+    dbPromise = openDB<OpenScriptureDB>('open-scripture-db', 2, {
+      upgrade(db, oldVersion, newVersion, transaction) {
+        let verseStore: any;
+        let refStore: any;
+        let noteStore: any;
 
-        // Cross References Store
-        const refStore = db.createObjectStore('cross_references', { keyPath: 'id' });
-        refStore.createIndex('by-source', 'sourceVerseId');
-        refStore.createIndex('by-target', 'targetVerseId');
+        if (oldVersion < 1) {
+          verseStore = db.createObjectStore('verses', { keyPath: 'id' });
+          verseStore.createIndex('by-book-chapter', ['bookId', 'chapter']);
 
-        // Annotations Store
-        const noteStore = db.createObjectStore('annotations', { keyPath: 'id' });
-        noteStore.createIndex('by-verse', 'verseId');
+          refStore = db.createObjectStore('cross_references', { keyPath: 'id' });
+          refStore.createIndex('by-source', 'sourceVerseId');
+          refStore.createIndex('by-target', 'targetVerseId');
 
-        // Bookmarks Store
-        db.createObjectStore('bookmarks', { keyPath: 'verseId' });
+          noteStore = db.createObjectStore('annotations', { keyPath: 'id' });
+          noteStore.createIndex('by-verse', 'verseId');
+
+          db.createObjectStore('bookmarks', { keyPath: 'verseId' });
+        }
       },
     });
   }
   return dbPromise;
 }
 
-export async function initializeDatabase() {
+export async function initializeDatabase(onProgress?: (progress: number, total: number) => void) {
   const db = await getDB();
-  const tx = db.transaction('cross_references', 'readwrite');
-  const count = await tx.store.count();
+  const count = await db.count('cross_references');
   
-  if (count === 0) {
-    // Populate seed cross-references
+  if (count < 300000) {
+    console.log('Populating 344,676 OKF cross-references into IndexedDB...');
+    try {
+      const resp = await fetch('/okf_full_cross_references.json');
+      if (resp.ok) {
+        const fullEdges: OKFCrossRefEdge[] = await resp.json();
+        const batchSize = 10000;
+        
+        for (let i = 0; i < fullEdges.length; i += batchSize) {
+          const batch = fullEdges.slice(i, i + batchSize);
+          const tx = db.transaction('cross_references', 'readwrite');
+          for (const ref of batch) {
+            await tx.store.put(ref);
+          }
+          await tx.done;
+
+          if (onProgress) {
+            onProgress(Math.min(fullEdges.length, i + batchSize), fullEdges.length);
+          }
+        }
+        console.log(`Successfully indexed ${fullEdges.length} cross-references into client IndexedDB!`);
+        return;
+      }
+    } catch (err) {
+      console.warn('Full graph fetch fallback to initial seed edges:', err);
+    }
+
+    // Fallback seed
+    const tx = db.transaction('cross_references', 'readwrite');
     for (const ref of INITIAL_CROSS_REFERENCES) {
       await tx.store.put(ref);
     }
+    await tx.done;
   }
-  await tx.done;
 }
 
 export async function getCrossReferencesForVerse(verseId: string): Promise<OKFCrossRefEdge[]> {
