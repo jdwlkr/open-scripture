@@ -18,11 +18,13 @@ import { getVerseById } from '../data/bibleData';
 interface InspectorPanelProps {
   selectedVerse: OKFVerseNode | null;
   onNavigateToVerse: (verseId: string) => void;
+  onOpenAiChat?: () => void;
 }
 
 export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   selectedVerse,
-  onNavigateToVerse
+  onNavigateToVerse,
+  onOpenAiChat
 }) => {
   const [crossRefs, setCrossRefs] = useState<OKFCrossRefEdge[]>([]);
   const [annotations, setAnnotations] = useState<UserAnnotation[]>([]);
@@ -105,12 +107,25 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           </div>
           <p className="node-verse-text">"{selectedVerse.text}"</p>
           
-          <div style={{ display: 'flex', gap: '6px', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-            {selectedVerse.tags?.map((t, idx) => (
-              <span key={idx} style={{ fontSize: '0.68rem', background: 'var(--accent-light)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                #{t}
-              </span>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {selectedVerse.tags?.map((t, idx) => (
+                <span key={idx} style={{ fontSize: '0.68rem', background: 'var(--accent-light)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  #{t}
+                </span>
+              ))}
+            </div>
+
+            {onOpenAiChat && (
+              <button 
+                className="btn-primary" 
+                onClick={onOpenAiChat}
+                style={{ padding: '0.25rem 0.65rem', fontSize: '0.75rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                title="Ask AI to analyze this verse"
+              >
+                <Sparkles size={12} color="#f59e0b" /> Ask AI
+              </button>
+            )}
           </div>
         </div>
 

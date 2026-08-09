@@ -6,21 +6,24 @@ import { GraphVisualizer } from './components/GraphVisualizer';
 import { ParallelView } from './components/ParallelView';
 import { SearchModal } from './components/SearchModal';
 import { OKFExporter } from './components/OKFExporter';
-import { OKFVerseNode } from './types/okf';
+import { AiChatDrawer } from './components/AiChatDrawer';
+import { OKFVerseNode, OKFCrossRefEdge } from './types/okf';
 import { TranslationId } from './services/apiBible';
 import { getVerseById } from './data/bibleData';
-import { initializeDatabase } from './services/db';
-import { Database, Sparkles } from 'lucide-react';
+import { initializeDatabase, getCrossReferencesForVerse } from './services/db';
+import { Database } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [currentBookId, setCurrentBookId] = useState<string>('GEN');
   const [currentChapter, setCurrentChapter] = useState<number>(1);
   const [translation, setTranslation] = useState<TranslationId>('KJV');
   const [selectedVerse, setSelectedVerse] = useState<OKFVerseNode | null>(null);
+  const [activeCrossRefs, setActiveCrossRefs] = useState<OKFCrossRefEdge[]>([]);
   
   const [activeTab, setActiveTab] = useState<'workbench' | 'graph' | 'parallel'>('workbench');
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
+  const [isAiChatOpen, setIsAiChatOpen] = useState<boolean>(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const [indexProgress, setIndexProgress] = useState<{ current: number; total: number } | null>(null);
@@ -40,6 +43,16 @@ export const App: React.FC = () => {
       setSelectedVerse(defaultNode);
     }
   }, []);
+
+  // Fetch cross references when selected verse changes
+  useEffect(() => {
+    if (!selectedVerse) return;
+    const fetchRefs = async () => {
+      const refs = await getCrossReferencesForVerse(selectedVerse.id);
+      setActiveCrossRefs(refs);
+    };
+    fetchRefs();
+  }, [selectedVerse]);
 
   // Update root document data-theme attribute
   useEffect(() => {
@@ -87,6 +100,7 @@ export const App: React.FC = () => {
         onTabChange={setActiveTab}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        onOpenAiChat={() => setIsAiChatOpen(true)}
         theme={theme}
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
       />
@@ -117,6 +131,7 @@ export const App: React.FC = () => {
             <InspectorPanel 
               selectedVerse={selectedVerse}
               onNavigateToVerse={handleNavigateToVerseId}
+              onOpenAiChat={() => setIsAiChatOpen(true)}
             />
           </>
         )}
@@ -152,6 +167,15 @@ export const App: React.FC = () => {
       <OKFExporter 
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
+      />
+
+      {/* AI Research Assistant Chat Drawer */}
+      <AiChatDrawer 
+        isOpen={isAiChatOpen}
+        onClose={() => setIsAiChatOpen(false)}
+        selectedVerse={selectedVerse}
+        translation={translation}
+        crossRefs={activeCrossRefs}
       />
     </div>
   );

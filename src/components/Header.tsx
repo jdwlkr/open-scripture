@@ -8,7 +8,8 @@ import {
   Sun, 
   Moon, 
   Layers,
-  Globe
+  Globe,
+  Sparkles
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '../data/bibleData';
 import { TRANSLATION_OPTIONS, TranslationId } from '../services/apiBible';
@@ -24,6 +25,7 @@ interface HeaderProps {
   onTabChange: (tab: 'workbench' | 'graph' | 'parallel') => void;
   onOpenSearch: () => void;
   onOpenExport: () => void;
+  onOpenAiChat: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
 }
@@ -39,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   onOpenSearch,
   onOpenExport,
+  onOpenAiChat,
   theme,
   onToggleTheme
 }) => {
@@ -163,6 +166,16 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Header Actions */}
       <div className="header-actions">
+        <button 
+          className="btn-primary" 
+          onClick={onOpenAiChat} 
+          style={{ padding: '0.35rem 0.85rem', fontSize: '0.82rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none' }}
+          title="Open AI Research Assistant (Gemini / Claude)"
+        >
+          <Sparkles size={16} color="#f59e0b" />
+          <span>AI Research</span>
+        </button>
+
         <button className="btn-icon" onClick={onOpenSearch} title="Search Scripture & Cross-References (Ctrl+K)">
           <Search size={18} />
         </button>
