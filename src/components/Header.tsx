@@ -9,7 +9,8 @@ import {
   Moon, 
   Layers,
   Globe,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '../data/bibleData';
 import { TRANSLATION_OPTIONS, TranslationId } from '../services/apiBible';
@@ -49,143 +50,116 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="app-header">
-      {/* Brand Title */}
+      {/* 1. Left: Brand Title */}
       <div className="brand-logo" onClick={() => onTabChange('workbench')}>
-        <BookOpen size={24} />
+        <BookOpen size={22} />
         <span>Open Scripture</span>
-        <span className="brand-tag">OKF 1.0</span>
       </div>
 
-      {/* Book & Chapter Fast Selector */}
-      <div className="scripture-nav-bar" style={{ padding: 0, border: 'none', background: 'transparent' }}>
-        <div className="select-group">
-          <select 
-            className="select-control"
-            value={currentBookId}
-            onChange={(e) => {
-              onBookChange(e.target.value);
-              onChapterChange(1);
-            }}
-          >
-            <optgroup label="Old Testament">
-              {BIBLE_BOOKS.filter(b => b.testament === 'OT').map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="New Testament">
-              {BIBLE_BOOKS.filter(b => b.testament === 'NT').map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </optgroup>
-          </select>
+      {/* 2. Center: Compact Scripture & Translation Navigation Bar */}
+      <div className="nav-controls-wrapper">
+        {/* Book Selector */}
+        <select 
+          className="select-control nav-pill-select"
+          value={currentBookId}
+          onChange={(e) => {
+            onBookChange(e.target.value);
+            onChapterChange(1);
+          }}
+        >
+          <optgroup label="Old Testament">
+            {BIBLE_BOOKS.filter(b => b.testament === 'OT').map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </optgroup>
+          <optgroup label="New Testament">
+            {BIBLE_BOOKS.filter(b => b.testament === 'NT').map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </optgroup>
+        </select>
 
+        {/* Chapter Selector */}
+        <select 
+          className="select-control nav-pill-select"
+          value={currentChapter}
+          onChange={(e) => onChapterChange(Number(e.target.value))}
+        >
+          {Array.from({ length: currentBook.chaptersCount }, (_, i) => i + 1).map(c => (
+            <option key={c} value={c}>Ch {c}</option>
+          ))}
+        </select>
+
+        <div className="divider-line" />
+
+        {/* Translation Selector */}
+        <div className="translation-pill">
+          <Globe size={13} color="var(--accent-primary)" />
           <select 
-            className="select-control"
-            value={currentChapter}
-            onChange={(e) => onChapterChange(Number(e.target.value))}
+            className="select-control nav-pill-select translation-select"
+            value={translation}
+            onChange={(e) => onTranslationChange(e.target.value as TranslationId)}
           >
-            {Array.from({ length: currentBook.chaptersCount }, (_, i) => i + 1).map(c => (
-              <option key={c} value={c}>Chapter {c}</option>
+            {TRANSLATION_OPTIONS.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.shortName}
+              </option>
             ))}
           </select>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '0.5rem' }}>
-            <Globe size={14} color="var(--accent-primary)" />
-            <select 
-              className="select-control"
-              style={{ fontWeight: 700, color: 'var(--accent-primary)', borderColor: 'rgba(99, 102, 241, 0.4)' }}
-              value={translation}
-              onChange={(e) => onTranslationChange(e.target.value as TranslationId)}
-            >
-              {TRANSLATION_OPTIONS.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.shortName} — {t.name} {t.isApi ? '(API)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
-      {/* View Mode Switcher */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'var(--bg-tertiary)', padding: '3px', borderRadius: 'var(--radius-md)' }}>
+      {/* 3. Segmented View Switcher */}
+      <div className="view-segmented-control">
         <button 
-          className={`btn-icon ${activeTab === 'workbench' ? 'selected' : ''}`}
-          style={{ 
-            width: 'auto', 
-            padding: '0.4rem 0.75rem', 
-            height: '32px', 
-            fontSize: '0.85rem',
-            background: activeTab === 'workbench' ? 'var(--accent-primary)' : 'transparent',
-            color: activeTab === 'workbench' ? '#ffffff' : 'var(--text-secondary)',
-            border: 'none'
-          }}
+          className={`segmented-btn ${activeTab === 'workbench' ? 'active' : ''}`}
           onClick={() => onTabChange('workbench')}
           title="Dual-Pane Research Workbench"
         >
-          <Layers size={16} style={{ marginRight: '6px' }} />
-          Workbench
+          <Layers size={14} />
+          <span>Workbench</span>
         </button>
 
         <button 
-          className={`btn-icon ${activeTab === 'graph' ? 'selected' : ''}`}
-          style={{ 
-            width: 'auto', 
-            padding: '0.4rem 0.75rem', 
-            height: '32px', 
-            fontSize: '0.85rem',
-            background: activeTab === 'graph' ? 'var(--accent-primary)' : 'transparent',
-            color: activeTab === 'graph' ? '#ffffff' : 'var(--text-secondary)',
-            border: 'none'
-          }}
+          className={`segmented-btn ${activeTab === 'graph' ? 'active' : ''}`}
           onClick={() => onTabChange('graph')}
           title="SVG Graph Visualizer"
         >
-          <Network size={16} style={{ marginRight: '6px' }} />
-          OKF Graph
+          <Network size={14} />
+          <span>OKF Graph</span>
         </button>
 
         <button 
-          className={`btn-icon ${activeTab === 'parallel' ? 'selected' : ''}`}
-          style={{ 
-            width: 'auto', 
-            padding: '0.4rem 0.75rem', 
-            height: '32px', 
-            fontSize: '0.85rem',
-            background: activeTab === 'parallel' ? 'var(--accent-primary)' : 'transparent',
-            color: activeTab === 'parallel' ? '#ffffff' : 'var(--text-secondary)',
-            border: 'none'
-          }}
+          className={`segmented-btn ${activeTab === 'parallel' ? 'active' : ''}`}
           onClick={() => onTabChange('parallel')}
           title="Parallel Passage Comparison"
         >
-          <Columns size={16} style={{ marginRight: '6px' }} />
-          Parallel
+          <Columns size={14} />
+          <span>Parallel</span>
         </button>
       </div>
 
-      {/* Header Actions */}
+      {/* 4. Right Actions */}
       <div className="header-actions">
         <button 
-          className="btn-primary" 
-          onClick={onOpenAiChat} 
-          style={{ padding: '0.35rem 0.85rem', fontSize: '0.82rem', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none' }}
-          title="Open AI Research Assistant (Gemini / Claude)"
+          className="btn-ai-sparkle" 
+          onClick={onOpenAiChat}
+          title="Open OKF Assistant Chat"
         >
-          <Sparkles size={16} color="#f59e0b" />
-          <span>AI Research</span>
+          <Sparkles size={15} color="#f59e0b" />
+          <span>Assistant</span>
         </button>
 
-        <button className="btn-icon" onClick={onOpenSearch} title="Search Scripture & Cross-References (Ctrl+K)">
-          <Search size={18} />
+        <button className="btn-icon" onClick={onOpenSearch} title="Search Scripture (Ctrl+K)">
+          <Search size={17} />
         </button>
 
-        <button className="btn-icon" onClick={onOpenExport} title="Export/Import OKF Knowledge Graph">
-          <Download size={18} />
+        <button className="btn-icon" onClick={onOpenExport} title="Export/Import OKF Schema">
+          <Download size={17} />
         </button>
 
-        <button className="btn-icon" onClick={onToggleTheme} title="Toggle Dark/Light Mode">
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        <button className="btn-icon" onClick={onToggleTheme} title="Toggle Theme">
+          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
         </button>
       </div>
     </header>
