@@ -1,4 +1,5 @@
 import { BibleBook, OKFVerseNode } from '../types/okf';
+import bibleFullIndex from './bibleFullIndex.json';
 
 export const BIBLE_BOOKS: BibleBook[] = [
   // Old Testament (39 Books)
@@ -72,93 +73,37 @@ export const BIBLE_BOOKS: BibleBook[] = [
   { id: 'REV', name: 'Revelation', testament: 'NT', category: 'Apocalyptic', chaptersCount: 22, abbreviation: 'Rev' }
 ];
 
-// High quality verse text generator & seed repository for key chapters across the entire Bible
-const SEED_VERSES_STORE: Record<string, string> = {
-  // Genesis 1
-  'GEN.1.1': 'In the beginning God created the heaven and the earth.',
-  'GEN.1.2': 'And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.',
-  'GEN.1.3': 'And God said, Let there be light: and there was light.',
-  'GEN.1.4': 'And God saw the light, that it was good: and God divided the light from the darkness.',
-  'GEN.1.5': 'And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.',
-  'GEN.1.26': 'And God said, Let us make man in our image, after our likeness: and let them have dominion over the fish of the sea, and over the fowl of the air, and over the cattle, and over all the earth.',
-  'GEN.1.27': 'So God created man in his own image, in the image of God created he him; male and female created he them.',
-
-  // Exodus 3
-  'EXO.3.14': 'And God said unto Moses, I AM THAT I AM: and he said, Thus shalt thou say unto the children of Israel, I AM hath sent me unto you.',
-
-  // Psalms 23 & 110
-  'PSA.23.1': 'The LORD is my shepherd; I shall not want.',
-  'PSA.23.2': 'He maketh me to lie down in green pastures: he leadeth me beside the still waters.',
-  'PSA.23.3': 'He restoreth my soul: he leadeth me in the paths of righteousness for his name\'s sake.',
-  'PSA.23.4': 'Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me.',
-  'PSA.23.5': 'Thou preparest a table before me in the presence of mine enemies: thou anointest my head with oil; my cup runneth over.',
-  'PSA.23.6': 'Surely goodness and mercy shall follow me all the days of my life: and I will dwell in the house of the LORD for ever.',
-  'PSA.110.1': 'The LORD said unto my Lord, Sit thou at my right hand, until I make thine enemies thy footstool.',
-
-  // Isaiah 7, 9, 53
-  'ISA.7.14': 'Therefore the Lord himself shall give you a sign; Behold, a virgin shall conceive, and bear a son, and shall call his name Immanuel.',
-  'ISA.9.6': 'For unto us a child is born, unto us a son is given: and the government shall be upon his shoulder: and his name shall be called Wonderful, Counseller, The mighty God, The everlasting Father, The Prince of Peace.',
-  'ISA.53.1': 'Who hath believed our report? and to whom is the arm of the LORD revealed?',
-  'ISA.53.3': 'He is despised and rejected of men; a man of sorrows, and acquainted with grief: and we hid as it were our faces from him; he was despised, and we esteemed him not.',
-  'ISA.53.5': 'But he was wounded for our transgressions, he was bruised for our iniquities: the chastisement of our peace was upon him; and with his stripes we are healed.',
-  'ISA.53.6': 'All we like sheep have gone astray; we have turned every one to his own way; and the LORD hath laid on him the iniquity of us all.',
-
-  // Matthew 1, 3, 28
-  'MAT.1.21': 'And she shall bring forth a son, and thou shalt call his name JESUS: for he shall save his people from their sins.',
-  'MAT.1.23': 'Behold, a virgin shall be with child, and shall bring forth a son, and they shall call his name Emmanuel, which being interpreted is, God with us.',
-  'MAT.3.17': 'And lo a voice from heaven, saying, This is my beloved Son, in whom I am well pleased.',
-  'MAT.28.19': 'Go ye therefore, and teach all nations, baptizing them in the name of the Father, and of the Son, and of the Holy Ghost:',
-
-  // John 1, 3, 8, 14
-  'JHN.1.1': 'In the beginning was the Word, and the Word was with God, and the Word was God.',
-  'JHN.1.2': 'The same was in the beginning with God.',
-  'JHN.1.3': 'All things were made by him; and without him was not any thing made that was made.',
-  'JHN.1.14': 'And the Word was made flesh, and dwelt among us, (and we beheld his glory, the glory as of the only begotten of the Father,) full of grace and truth.',
-  'JHN.3.16': 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.',
-  'JHN.3.17': 'For God sent not his Son into the world to condemn the world; but that the world through him might be saved.',
-  'JHN.8.58': 'Jesus said unto them, Verily, verily, I say unto you, Before Abraham was, I am.',
-  'JHN.14.6': 'Jesus saith unto him, I am the way, the truth, and the life: no man cometh unto the Father, but by me.',
-
-  // Romans 3, 5, 8
-  'ROM.3.23': 'For all have sinned, and come short of the glory of God;',
-  'ROM.5.8': 'But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us.',
-  'ROM.8.28': 'And we know that all things work together for good to them that love God, to them who are the called according to his purpose.',
-  'ROM.8.38': 'For I am persuaded, that neither death, nor life, nor angels, nor principalities, nor powers, nor things present, nor things to come,',
-  'ROM.8.39': 'Nor height, nor depth, nor any other creature, shall be able to separate us from the love of God, which is in Christ Jesus our Lord.',
-
-  // Revelation 1, 21, 22
-  'REV.1.8': 'I am Alpha and Omega, the beginning and the ending, saith the Lord, which is, and which was, and which is to come, the Almighty.',
-  'REV.21.1': 'And I saw a new heaven and a new earth: for the first heaven and the first earth were passed away; and there was no more sea.',
-  'REV.22.13': 'I am Alpha and Omega, the beginning and the end, the first and the last.'
-};
+const verseIndexRecord = bibleFullIndex as Record<string, string>;
 
 /**
- * Get verses for any chapter of any book in the Bible.
- * If specific verse text is in seed, it uses exact text; otherwise generates text structure
- * allowing all 1,189 chapters of all 66 books to be explored and cross-referenced.
+ * Get authentic verses for any chapter of any book in the Bible.
  */
 export function getChapterVerses(bookId: string, chapter: number): OKFVerseNode[] {
   const book = BIBLE_BOOKS.find(b => b.id === bookId);
   if (!book) return [];
 
-  // Default verse counts per chapter
-  const verseCount = 15;
   const verses: OKFVerseNode[] = [];
+  let verseNum = 1;
 
-  for (let v = 1; v <= verseCount; v++) {
-    const verseId = `${bookId}.${chapter}.${v}`;
-    const seedText = SEED_VERSES_STORE[verseId];
-    
-    const text = seedText || `Verse text for ${book.name} ${chapter}:${v} — Study cross-references, parallel passages, and OKF knowledge graph nodes.`;
+  while (true) {
+    const verseId = `${bookId}.${chapter}.${verseNum}`;
+    const text = verseIndexRecord[verseId];
+
+    if (!text) {
+      // End of verses for this chapter
+      break;
+    }
 
     verses.push({
       id: verseId,
       bookId,
       chapter,
-      verse: v,
+      verse: verseNum,
       text,
       tags: [book.category, book.testament]
     });
+
+    verseNum++;
   }
 
   return verses;
@@ -175,8 +120,8 @@ export function getVerseById(verseId: string): OKFVerseNode | null {
 
   if (!book) return null;
 
-  const seedText = SEED_VERSES_STORE[verseId];
-  const text = seedText || `Verse text for ${book.name} ${chapter}:${verse} — Study cross-references, parallel passages, and OKF knowledge graph nodes.`;
+  const text = verseIndexRecord[verseId];
+  if (!text) return null;
 
   return {
     id: verseId,
