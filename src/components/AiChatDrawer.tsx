@@ -16,6 +16,7 @@ import { OKFVerseNode, OKFCrossRefEdge } from '../types/okf';
 import { TranslationId } from '../services/apiBible';
 import { OKFEngine } from '../services/okfEngine';
 import { queryOkfKnowledgeGraph, OkfChatMessage } from '../services/okfChatEngine';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface AiChatDrawerProps {
   isOpen: boolean;
@@ -152,12 +153,11 @@ Ask any question about scripture, verses, or cross-references. I query the local
                   borderRadius: 'var(--radius-md)', 
                   fontSize: '0.9rem', 
                   lineHeight: 1.6,
-                  border: msg.sender === 'user' ? 'none' : '1px solid var(--border-color)',
-                  whiteSpace: 'pre-wrap'
+                  border: msg.sender === 'user' ? 'none' : '1px solid var(--border-color)'
                 }}
               >
-                {msg.text}
-                <span style={{ display: 'block', fontSize: '0.68rem', opacity: 0.7, marginTop: '0.4rem', textAlign: 'right' }}>
+                <MarkdownRenderer content={msg.text} />
+                <span style={{ display: 'block', fontSize: '0.68rem', opacity: 0.7, marginTop: '0.5rem', textAlign: 'right' }}>
                   {msg.timestamp}
                 </span>
               </div>
