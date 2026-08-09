@@ -90,6 +90,7 @@ export const App: React.FC = () => {
             <ScriptureReader 
               bookId={currentBookId}
               chapter={currentChapter}
+              translation={translation}
               selectedVerseId={selectedVerse ? selectedVerse.id : ''}
               onSelectVerse={setSelectedVerse}
               onChapterChange={setCurrentChapter}

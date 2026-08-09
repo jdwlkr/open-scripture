@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Share2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Share2, ZoomIn, ZoomOut, Globe, Loader2 } from 'lucide-react';
 import { OKFVerseNode } from '../types/okf';
-import { getChapterVerses, BIBLE_BOOKS } from '../data/bibleData';
+import { BIBLE_BOOKS } from '../data/bibleData';
 import { getCrossReferencesForVerse } from '../services/db';
+import { TranslationId, getTranslationChapterVerses, TRANSLATION_OPTIONS } from '../services/apiBible';
 
 interface ScriptureReaderProps {
   bookId: string;
   chapter: number;
+  translation: TranslationId;
   selectedVerseId: string;
   onSelectVerse: (verseNode: OKFVerseNode) => void;
   onChapterChange: (chapter: number) => void;
@@ -15,6 +17,7 @@ interface ScriptureReaderProps {
 export const ScriptureReader: React.FC<ScriptureReaderProps> = ({
   bookId,
   chapter,
+  translation,
   selectedVerseId,
   onSelectVerse,
   onChapterChange
@@ -22,15 +25,23 @@ export const ScriptureReader: React.FC<ScriptureReaderProps> = ({
   const [verses, setVerses] = useState<OKFVerseNode[]>([]);
   const [crossRefCounts, setCrossRefCounts] = useState<Record<string, number>>({});
   const [fontSize, setFontSize] = useState<number>(1.2);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const book = BIBLE_BOOKS.find(b => b.id === bookId) || BIBLE_BOOKS[0];
+  const activeTranslation = TRANSLATION_OPTIONS.find(t => t.id === translation) || TRANSLATION_OPTIONS[0];
 
   useEffect(() => {
-    const loadedVerses = getChapterVerses(bookId, chapter);
-    setVerses(loadedVerses);
+    let isSubscribed = true;
+    setLoading(true);
 
-    // Fetch cross-reference counts for all verses in this chapter
-    const fetchCounts = async () => {
+    const loadData = async () => {
+      const loadedVerses = await getTranslationChapterVerses(bookId, chapter, translation);
+      if (isSubscribed) {
+        setVerses(loadedVerses);
+        setLoading(false);
+      }
+
+      // Fetch cross-reference counts for all verses in this chapter
       const counts: Record<string, number> = {};
       for (const v of loadedVerses) {
         const refs = await getCrossReferencesForVerse(v.id);
@@ -38,11 +49,17 @@ export const ScriptureReader: React.FC<ScriptureReaderProps> = ({
           counts[v.id] = refs.length;
         }
       }
-      setCrossRefCounts(counts);
+      if (isSubscribed) {
+        setCrossRefCounts(counts);
+      }
     };
 
-    fetchCounts();
-  }, [bookId, chapter]);
+    loadData();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [bookId, chapter, translation]);
 
   const handlePrevChapter = () => {
     if (chapter > 1) {
@@ -83,6 +100,29 @@ export const ScriptureReader: React.FC<ScriptureReaderProps> = ({
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
             {book.name} {chapter} of {book.chaptersCount}
           </span>
+
+          <span 
+            style={{ 
+              fontSize: '0.7rem', 
+              fontFamily: 'var(--font-mono)', 
+              background: 'var(--accent-light)', 
+              color: 'var(--accent-primary)', 
+              padding: '2px 7px', 
+              borderRadius: '4px', 
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Globe size={11} />
+            {activeTranslation.shortName}
+          </span>
+
+          {loading && (
+            <Loader2 size={14} className="spin" style={{ color: 'var(--accent-primary)', animation: 'spin 1s linear infinite' }} />
+          )}
+
           <div style={{ display: 'flex', gap: '4px' }}>
             <button className="btn-icon" style={{ width: '28px', height: '28px' }} onClick={() => setFontSize(f => Math.max(0.9, f - 0.1))} title="Decrease Font Size">
               <ZoomOut size={14} />
@@ -108,7 +148,9 @@ export const ScriptureReader: React.FC<ScriptureReaderProps> = ({
       <div className="reader-scroll-container">
         <div className="chapter-title-block">
           <h1 className="chapter-book-name">{book.name} {chapter}</h1>
-          <p className="chapter-subtitle">{book.category} • {book.testament === 'OT' ? 'Old Testament' : 'New Testament'}</p>
+          <p className="chapter-subtitle">
+            {book.category} • {book.testament === 'OT' ? 'Old Testament' : 'New Testament'} • [{activeTranslation.name}]
+          </p>
         </div>
 
         <div className="verse-list">
