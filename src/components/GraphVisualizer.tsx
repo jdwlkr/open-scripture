@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { OKFVerseNode, OKFCrossRefEdge } from '../types/okf';
 import { OKFEngine } from '../services/okfEngine';
-import { ZoomIn, ZoomOut, RefreshCw, Layers, Move } from 'lucide-react';
+import { ZoomIn, ZoomOut, RefreshCw, Move, Maximize2 } from 'lucide-react';
 
 interface GraphVisualizerProps {
   rootVerseId: string;
@@ -14,8 +14,6 @@ interface NodeLayout {
   text: string;
   x: number;
   y: number;
-  vx: number;
-  vy: number;
   isRoot: boolean;
 }
 
@@ -29,14 +27,18 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
   
   const [depth, setDepth] = useState<number>(1);
   const [zoom, setZoom] = useState<number>(1);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
   const [hoveredNode, setHoveredNode] = useState<NodeLayout | null>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const width = 900;
-  const height = 650;
+  const width = 1000;
+  const height = 700;
   const cx = width / 2;
   const cy = height / 2;
 
@@ -47,7 +49,6 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
       setNodes(graph.nodes);
       setEdges(graph.edges);
 
-      // Initialize force layout positions
       const initialLayout: NodeLayout[] = [];
       const rootNodeObj = graph.nodes.find(n => n.id === rootVerseId);
       
@@ -58,8 +59,6 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
         text: rootNodeObj?.text || '',
         x: cx,
         y: cy,
-        vx: 0,
-        vy: 0,
         isRoot: true
       });
 
@@ -67,12 +66,12 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
       const totalOthers = otherNodes.length;
 
       otherNodes.forEach((node, idx) => {
-        // Multi-ring concentric radial distribution for clear spacing when many nodes exist
+        // Multi-ring concentric radial distribution for clear spacing
         const ring = Math.floor(idx / 12) + 1;
         const countInRing = Math.min(12, totalOthers - (ring - 1) * 12);
         const idxInRing = idx % 12;
         
-        const radius = ring * 160;
+        const radius = ring * 180;
         const angle = (idxInRing / countInRing) * 2 * Math.PI + (ring * 0.3);
         
         initialLayout.push({
@@ -81,46 +80,68 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
           text: node.text,
           x: cx + radius * Math.cos(angle),
           y: cy + radius * Math.sin(angle),
-          vx: 0,
-          vy: 0,
           isRoot: false
         });
       });
 
       setLayoutNodes(initialLayout);
+      setPan({ x: 0, y: 0 });
     };
 
     fetchGraph();
   }, [rootVerseId, depth]);
 
-  // Handle Dragging Node Movement
-  const handleMouseDown = (nodeId: string, e: React.MouseEvent) => {
+  // Handle Dragging Specific Node vs Panning Entire Canvas
+  const handleNodeMouseDown = (nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDraggedNodeId(nodeId);
   };
 
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (draggedNodeId) return;
+    setIsPanning(true);
+    setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!draggedNodeId || !svgRef.current) return;
+    if (draggedNodeId && svgRef.current) {
+      const rect = svgRef.current.getBoundingClientRect();
+      // Translate mouse screen coordinates to SVG viewBox space taking zoom & pan into account
+      const mouseX = ((e.clientX - rect.left) * (width / rect.width) - pan.x) / zoom;
+      const mouseY = ((e.clientY - rect.top) * (height / rect.height) - pan.y) / zoom;
 
-    const rect = svgRef.current.getBoundingClientRect();
-    // Translate mouse screen coordinates to SVG viewBox space
-    const mouseX = (e.clientX - rect.left) * (width / rect.width);
-    const mouseY = (e.clientY - rect.top) * (height / rect.height);
-
-    setLayoutNodes(prev => prev.map(node => {
-      if (node.id === draggedNodeId) {
-        return {
-          ...node,
-          x: mouseX,
-          y: mouseY
-        };
-      }
-      return node;
-    }));
+      setLayoutNodes(prev => prev.map(node => {
+        if (node.id === draggedNodeId) {
+          return {
+            ...node,
+            x: mouseX,
+            y: mouseY
+          };
+        }
+        return node;
+      }));
+    } else if (isPanning) {
+      setPan({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      });
+    }
   };
 
   const handleMouseUp = () => {
     setDraggedNodeId(null);
+    setIsPanning(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+    setZoom(z => Math.min(3, Math.max(0.3, z * zoomFactor)));
+  };
+
+  const handleResetView = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
   };
 
   const getCategoryColor = (category: string) => {
@@ -138,7 +159,12 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
   layoutNodes.forEach(n => nodeMap.set(n.id, n));
 
   return (
-    <div className="graph-canvas-container" ref={containerRef} onMouseUp={handleMouseUp}>
+    <div 
+      className="graph-canvas-container" 
+      ref={containerRef} 
+      onMouseUp={handleMouseUp}
+      style={{ userSelect: 'none' }}
+    >
       {/* Top Bar Info & Controls */}
       <div style={{ position: 'absolute', top: '1.25rem', left: '1.25rem', zIndex: 10, display: 'flex', gap: '0.75rem', alignItems: 'center', background: 'var(--bg-glass)', backdropFilter: 'blur(12px)', padding: '0.55rem 0.9rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-primary)', fontWeight: 700, fontSize: '0.88rem' }}>
@@ -168,27 +194,29 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Zoom Controls */}
+      {/* Zoom & Reset Controls */}
       <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', zIndex: 10, display: 'flex', gap: '4px', background: 'var(--bg-glass)', backdropFilter: 'blur(12px)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-        <button className="btn-icon" onClick={() => setZoom(z => Math.min(2.5, z + 0.15))} title="Zoom In">
+        <button className="btn-icon" onClick={() => setZoom(z => Math.min(3, z + 0.2))} title="Zoom In">
           <ZoomIn size={16} />
         </button>
-        <button className="btn-icon" onClick={() => setZoom(z => Math.max(0.4, z - 0.15))} title="Zoom Out">
+        <button className="btn-icon" onClick={() => setZoom(z => Math.max(0.3, z - 0.2))} title="Zoom Out">
           <ZoomOut size={16} />
         </button>
-        <button className="btn-icon" onClick={() => setZoom(1)} title="Reset Zoom">
-          <RefreshCw size={16} />
+        <button className="btn-icon" onClick={handleResetView} title="Reset View & Center Pan">
+          <Maximize2 size={16} />
         </button>
       </div>
 
-      {/* Interactive SVG Canvas */}
+      {/* Interactive SVG Canvas with Draggable Canvas Pan */}
       <svg 
         ref={svgRef}
         className="graph-svg" 
         viewBox={`0 0 ${width} ${height}`}
+        onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: draggedNodeId ? 'none' : 'transform 0.2s ease', cursor: draggedNodeId ? 'grabbing' : 'default' }}
+        onWheel={handleWheel}
+        style={{ cursor: isPanning ? 'grabbing' : draggedNodeId ? 'grabbing' : 'grab' }}
       >
         <defs>
           <radialGradient id="rootGlow" cx="50%" cy="50%" r="50%">
@@ -200,83 +228,85 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
           </filter>
         </defs>
 
-        {/* Edges */}
-        {edges.map(edge => {
-          const source = nodeMap.get(edge.sourceVerseId);
-          const target = nodeMap.get(edge.targetVerseId);
-          if (!source || !target) return null;
+        {/* Transformed Group for Panning & Zooming */}
+        <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`} style={{ transformOrigin: 'center center' }}>
+          {/* Edges */}
+          {edges.map(edge => {
+            const source = nodeMap.get(edge.sourceVerseId);
+            const target = nodeMap.get(edge.targetVerseId);
+            if (!source || !target) return null;
 
-          const color = getCategoryColor(edge.category);
-          const isHovered = hoveredNode && (hoveredNode.id === source.id || hoveredNode.id === target.id);
+            const color = getCategoryColor(edge.category);
+            const isHovered = hoveredNode && (hoveredNode.id === source.id || hoveredNode.id === target.id);
 
-          return (
-            <g key={edge.id}>
-              <line 
-                x1={source.x} 
-                y1={source.y} 
-                x2={target.x} 
-                y2={target.y} 
-                stroke={color} 
-                strokeWidth={isHovered ? edge.weight * 1.2 + 2 : edge.weight * 0.7 + 1} 
-                strokeOpacity={isHovered ? 0.95 : 0.45} 
-                strokeDasharray={edge.category === 'topical_echo' ? '5,4' : 'none'}
-              />
-            </g>
-          );
-        })}
+            return (
+              <g key={edge.id}>
+                <line 
+                  x1={source.x} 
+                  y1={source.y} 
+                  x2={target.x} 
+                  y2={target.y} 
+                  stroke={color} 
+                  strokeWidth={isHovered ? edge.weight * 1.2 + 2 : edge.weight * 0.7 + 1} 
+                  strokeOpacity={isHovered ? 0.95 : 0.45} 
+                  strokeDasharray={edge.category === 'topical_echo' ? '5,4' : 'none'}
+                />
+              </g>
+            );
+          })}
 
-        {/* Draggable Nodes */}
-        {layoutNodes.map(node => {
-          const isBeingDragged = draggedNodeId === node.id;
-          const isHovered = hoveredNode?.id === node.id;
+          {/* Draggable Verse Nodes */}
+          {layoutNodes.map(node => {
+            const isBeingDragged = draggedNodeId === node.id;
+            const isHovered = hoveredNode?.id === node.id;
 
-          return (
-            <g 
-              key={node.id} 
-              transform={`translate(${node.x}, ${node.y})`}
-              style={{ cursor: isBeingDragged ? 'grabbing' : 'grab' }}
-              onMouseDown={(e) => handleMouseDown(node.id, e)}
-              onClick={() => {
-                if (!isBeingDragged) onSelectVerse(node.id);
-              }}
-              onMouseEnter={() => setHoveredNode(node)}
-              onMouseLeave={() => setHoveredNode(null)}
-            >
-              {/* Central Glow for Root Node */}
-              {node.isRoot && (
-                <circle r={44} fill="url(#rootGlow)" />
-              )}
-              
-              {/* Node Circle */}
-              <circle 
-                r={node.isRoot ? 22 : isHovered ? 18 : 14} 
-                fill={node.isRoot ? '#6366f1' : isHovered ? 'var(--accent-primary)' : 'var(--bg-secondary)'} 
-                stroke={node.isRoot ? '#ffffff' : isHovered ? '#ffffff' : 'var(--accent-primary)'} 
-                strokeWidth={node.isRoot ? 3 : isHovered ? 2.5 : 2}
-                filter="url(#shadow)"
-                style={{ transition: isBeingDragged ? 'none' : 'all 0.15s ease' }}
-              />
-
-              {/* Node Reference Label */}
-              <text 
-                y={node.isRoot ? 38 : 28} 
-                textAnchor="middle" 
-                fill={node.isRoot ? '#ffffff' : isHovered ? 'var(--accent-primary)' : 'var(--text-primary)'} 
-                fontSize={node.isRoot ? '12px' : '10px'} 
-                fontWeight={node.isRoot || isHovered ? 'bold' : '500'}
-                fontFamily="var(--font-display)"
-                style={{ pointerEvents: 'none', userSelect: 'none' }}
+            return (
+              <g 
+                key={node.id} 
+                transform={`translate(${node.x}, ${node.y})`}
+                style={{ cursor: isBeingDragged ? 'grabbing' : 'grab' }}
+                onMouseDown={(e) => handleNodeMouseDown(node.id, e)}
+                onClick={() => {
+                  if (!isBeingDragged && !isPanning) onSelectVerse(node.id);
+                }}
+                onMouseEnter={() => setHoveredNode(node)}
+                onMouseLeave={() => setHoveredNode(null)}
               >
-                {node.ref}
-              </text>
-            </g>
-          );
-        })}
+                {/* Central Glow for Root Node */}
+                {node.isRoot && (
+                  <circle r={44} fill="url(#rootGlow)" />
+                )}
+                
+                {/* Node Circle */}
+                <circle 
+                  r={node.isRoot ? 22 : isHovered ? 18 : 14} 
+                  fill={node.isRoot ? '#6366f1' : isHovered ? 'var(--accent-primary)' : 'var(--bg-secondary)'} 
+                  stroke={node.isRoot ? '#ffffff' : isHovered ? '#ffffff' : 'var(--accent-primary)'} 
+                  strokeWidth={node.isRoot ? 3 : isHovered ? 2.5 : 2}
+                  filter="url(#shadow)"
+                />
+
+                {/* Node Reference Label */}
+                <text 
+                  y={node.isRoot ? 38 : 28} 
+                  textAnchor="middle" 
+                  fill={node.isRoot ? '#ffffff' : isHovered ? 'var(--accent-primary)' : 'var(--text-primary)'} 
+                  fontSize={node.isRoot ? '12px' : '10px'} 
+                  fontWeight={node.isRoot || isHovered ? 'bold' : '500'}
+                  fontFamily="var(--font-display)"
+                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                >
+                  {node.ref}
+                </text>
+              </g>
+            );
+          })}
+        </g>
       </svg>
 
-      {/* Dragging Help Tip */}
+      {/* Navigation Help Tip */}
       <div style={{ position: 'absolute', bottom: '1rem', right: '1.25rem', fontSize: '0.72rem', color: 'var(--text-muted)', background: 'var(--bg-glass)', backdropFilter: 'blur(8px)', padding: '4px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', pointerEvents: 'none' }}>
-        💡 Drag any verse node to arrange references freely
+        ✋ Drag background to pan canvas • Drag nodes to reposition • Scroll mouse wheel to zoom
       </div>
 
       {/* Hovered Node Text Preview Drawer */}
