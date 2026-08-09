@@ -2,6 +2,8 @@
 
 export type Testament = 'OT' | 'NT';
 
+export type TranslationId = 'KJV' | 'WEB' | 'ESV' | 'NLT';
+
 export type BookCategory = 
   | 'Law' 
   | 'History' 

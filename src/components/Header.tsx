@@ -7,15 +7,19 @@ import {
   Download, 
   Sun, 
   Moon, 
-  Layers
+  Layers,
+  Globe
 } from 'lucide-react';
 import { BIBLE_BOOKS } from '../data/bibleData';
+import { TRANSLATION_OPTIONS, TranslationId } from '../services/apiBible';
 
 interface HeaderProps {
   currentBookId: string;
   currentChapter: number;
   onBookChange: (bookId: string) => void;
   onChapterChange: (chapter: number) => void;
+  translation: TranslationId;
+  onTranslationChange: (t: TranslationId) => void;
   activeTab: 'workbench' | 'graph' | 'parallel';
   onTabChange: (tab: 'workbench' | 'graph' | 'parallel') => void;
   onOpenSearch: () => void;
@@ -29,6 +33,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentChapter,
   onBookChange,
   onChapterChange,
+  translation,
+  onTranslationChange,
   activeTab,
   onTabChange,
   onOpenSearch,
@@ -79,6 +85,22 @@ export const Header: React.FC<HeaderProps> = ({
               <option key={c} value={c}>Chapter {c}</option>
             ))}
           </select>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '0.5rem' }}>
+            <Globe size={14} color="var(--accent-primary)" />
+            <select 
+              className="select-control"
+              style={{ fontWeight: 700, color: 'var(--accent-primary)', borderColor: 'rgba(99, 102, 241, 0.4)' }}
+              value={translation}
+              onChange={(e) => onTranslationChange(e.target.value as TranslationId)}
+            >
+              {TRANSLATION_OPTIONS.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.shortName} — {t.name} {t.isApi ? '(API)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

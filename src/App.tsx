@@ -7,12 +7,14 @@ import { ParallelView } from './components/ParallelView';
 import { SearchModal } from './components/SearchModal';
 import { OKFExporter } from './components/OKFExporter';
 import { OKFVerseNode } from './types/okf';
+import { TranslationId } from './services/apiBible';
 import { getChapterVerses, getVerseById } from './data/bibleData';
 import { initializeDatabase } from './services/db';
 
 export const App: React.FC = () => {
   const [currentBookId, setCurrentBookId] = useState<string>('GEN');
   const [currentChapter, setCurrentChapter] = useState<number>(1);
+  const [translation, setTranslation] = useState<TranslationId>('KJV');
   const [selectedVerse, setSelectedVerse] = useState<OKFVerseNode | null>(null);
   
   const [activeTab, setActiveTab] = useState<'workbench' | 'graph' | 'parallel'>('workbench');
@@ -71,6 +73,8 @@ export const App: React.FC = () => {
         currentChapter={currentChapter}
         onBookChange={setCurrentBookId}
         onChapterChange={setCurrentChapter}
+        translation={translation}
+        onTranslationChange={setTranslation}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onOpenSearch={() => setIsSearchOpen(true)}
